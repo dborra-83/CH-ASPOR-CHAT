@@ -1,0 +1,27 @@
+{
+  "app": "python app.py",
+  "watch": {
+    "include": [
+      "**"
+    ],
+    "exclude": [
+      "README.md",
+      "cdk*.json",
+      "requirements*.txt",
+      "**/__pycache__",
+      "python/**",
+      ".venv/**",
+      ".git/**"
+    ]
+  },
+  "context": {
+    "@aws-cdk/aws-lambda:recognizeLayerVersion": true,
+    "@aws-cdk/aws-s3:serverAccessLogsUseBucketPolicy": true,
+    "@aws-cdk/aws-apigateway:disableCloudWatchRole": true,
+    "@aws-cdk/aws-ecs-patterns:removeDefaultDesiredCount": true,
+    "@aws-cdk/aws-rds:lowercaseDbIdentifier": true,
+    "@aws-cdk/aws-efs:defaultEncryptionAtRest": true,
+    "@aws-cdk/aws-lambda:recognizeVersionProps": true,
+    "@aws-cdk/aws-cloudfront:defaultSecurityPolicyTLSv1.2_2021": true
+  }
+}

@@ -1,0 +1,73 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --foreground-rgb: 0, 0, 0;
+  --background-start-rgb: 248, 250, 252;
+  --background-end-rgb: 255, 255, 255;
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  color: rgb(var(--foreground-rgb));
+  background: linear-gradient(
+      to bottom,
+      transparent,
+      rgb(var(--background-end-rgb))
+    )
+    rgb(var(--background-start-rgb));
+}
+
+.tabler-card {
+  @apply bg-white rounded-lg border border-tabler-border shadow-sm;
+}
+
+.tabler-btn {
+  @apply inline-flex items-center justify-center px-4 py-2 text-sm font-medium rounded-md transition-colors;
+}
+
+.tabler-btn-primary {
+  @apply tabler-btn bg-tabler-blue text-white hover:bg-blue-700;
+}
+
+.tabler-btn-secondary {
+  @apply tabler-btn bg-white text-tabler-gray border border-tabler-border hover:bg-gray-50;
+}
+
+.tabler-input {
+  @apply block w-full px-3 py-2 text-sm border border-tabler-border rounded-md focus:outline-none focus:ring-2 focus:ring-tabler-blue focus:border-transparent;
+}
+
+.tabler-label {
+  @apply block text-sm font-medium text-gray-700 mb-1;
+}
+
+.chat-message {
+  @apply p-4 rounded-lg mb-3 max-w-4xl;
+}
+
+.chat-message-user {
+  @apply chat-message bg-blue-50 ml-auto;
+}
+
+.chat-message-assistant {
+  @apply chat-message bg-gray-50;
+}
+
+.status-badge {
+  @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+}
+
+.status-badge-processing {
+  @apply status-badge bg-yellow-100 text-yellow-800;
+}
+
+.status-badge-completed {
+  @apply status-badge bg-green-100 text-green-800;
+}
+
+.status-badge-failed {
+  @apply status-badge bg-red-100 text-red-800;
+}
