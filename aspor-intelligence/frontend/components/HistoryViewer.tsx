@@ -14,7 +14,11 @@ import {
   IconBrain,
   IconFileText,
   IconDownload,
-  IconExternalLink
+  IconExternalLink,
+  IconSearch,
+  IconFilter,
+  IconX,
+  IconRefresh
 } from '@tabler/icons-react';
 import axios from 'axios';
 import AnalysisFormatter from './AnalysisFormatter';
@@ -29,11 +33,12 @@ interface HistoryItem {
   completedAt?: string;
   errorMessage?: string;
   analysis?: string;
-  bedrockResult?: string;  // Add bedrockResult field
+  analysisResult?: string;  // New field from async processing
+  bedrockResult?: string;  // Legacy field
   analysisKey?: string;
   fileSize?: number;
   extractedLength?: number;
-  allFields?: string[];  // Debug field to see what's available
+  analysisMethod?: string;  // Track how it was analyzed
 }
 
 interface HistoryViewerProps {
@@ -52,6 +57,9 @@ export default function HistoryViewer({
   const [error, setError] = useState<string | null>(null);
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
   const [loadingAnalysis, setLoadingAnalysis] = useState<Set<string>>(new Set());
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [filterModel, setFilterModel] = useState<string>('all');
 
   // Helper function to format dates in local timezone
   const formatLocalDateTime = (dateString: string | undefined, format: 'short' | 'long' = 'short') => {
@@ -104,8 +112,9 @@ export default function HistoryViewer({
       console.log('Has analysis:', item?.analysis);
       console.log('Has bedrockResult:', item?.bedrockResult);
       
-      // Check if we already have the analysis (from bedrockResult or analysis field)
-      if (item && !item.analysis && !item.bedrockResult) {
+      // Check if we already have the analysis (from any field)
+      const hasAnalysis = item?.analysis || item?.analysisResult || item?.bedrockResult;
+      if (item && !hasAnalysis) {
         console.log('Loading analysis from API for:', runId);
         // Only load from API if we don't have the analysis yet
         const newLoading = new Set(loadingAnalysis);
@@ -114,17 +123,34 @@ export default function HistoryViewer({
         
         try {
           const baseUrl = apiUrl.endsWith('/') ? apiUrl.slice(0, -1) : apiUrl;
-          const url = `${baseUrl}/runs/${runId}`;
-          console.log('Fetching from:', url);
-          const response = await axios.get(url);
+          // Try new status endpoint first
+          let response;
+          try {
+            const statusUrl = `${baseUrl}/status/${runId}`;
+            console.log('Fetching from status endpoint:', statusUrl);
+            response = await axios.get(statusUrl);
+          } catch (err) {
+            // Fallback to old endpoint
+            const url = `${baseUrl}/runs/${runId}`;
+            console.log('Fallback to runs endpoint:', url);
+            response = await axios.get(url);
+          }
+          
           console.log('API Response:', response.data);
           
-          // Update history with analysis
+          // Update history with analysis - check all possible fields
+          const analysisContent = response.data.analysis || 
+                                 response.data.analysisResult || 
+                                 response.data.bedrockResult || 
+                                 null;
+          
           const updatedHistory = history.map(h => 
             h.runId === runId ? { 
               ...h, 
-              analysis: response.data.analysis || response.data.bedrockResult,
-              bedrockResult: response.data.bedrockResult || response.data.analysis
+              analysis: analysisContent,
+              analysisResult: response.data.analysisResult,
+              bedrockResult: response.data.bedrockResult,
+              model: response.data.model || h.model
             } : h
           );
           setHistory(updatedHistory);
@@ -212,6 +238,18 @@ export default function HistoryViewer({
     return 'N/A';
   };
 
+  // Filter history based on search and filters
+  const filteredHistory = history.filter(item => {
+    const matchesSearch = searchTerm === '' || 
+      item.fileName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.runId.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesStatus = filterStatus === 'all' || item.status === filterStatus;
+    const matchesModel = filterModel === 'all' || item.model === filterModel;
+    
+    return matchesSearch && matchesStatus && matchesModel;
+  });
+
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8">
@@ -252,35 +290,155 @@ export default function HistoryViewer({
   }
 
   return (
-    <div className="p-6">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h3 className="text-xl font-semibold text-gray-900 flex items-center">
-            <IconHistory size={24} className="mr-2 text-blue-600" />
-            Historial de Procesamiento
-          </h3>
-          <p className="text-sm text-gray-500 mt-1">
-            {history.length} documento{history.length !== 1 ? 's' : ''} procesado{history.length !== 1 ? 's' : ''} • 
-            Zona horaria: {Intl.DateTimeFormat().resolvedOptions().timeZone}
-          </p>
-        </div>
-        <button 
-          onClick={fetchHistory}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-          </svg>
-          <span>Actualizar</span>
-        </button>
-      </div>
+    <div className="p-6 bg-gradient-to-br from-gray-50 to-white min-h-screen">
+      <div className="max-w-7xl mx-auto">
+        {/* Header Section */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h3 className="text-2xl font-bold text-gray-900 flex items-center">
+                <div className="p-2 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg mr-3">
+                  <IconHistory size={28} className="text-white" />
+                </div>
+                Historial de Análisis
+              </h3>
+              <p className="text-sm text-gray-600 mt-2 ml-14">
+                {history.length} documento{history.length !== 1 ? 's' : ''} • 
+                {filteredHistory.length} visible{filteredHistory.length !== 1 ? 's' : ''} • 
+                {Intl.DateTimeFormat().resolvedOptions().timeZone}
+              </p>
+            </div>
+            <button 
+              onClick={fetchHistory}
+              className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-200 flex items-center space-x-2 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+            >
+              <IconRefresh size={18} />
+              <span className="font-medium">Actualizar</span>
+            </button>
+          </div>
 
-      <div className="space-y-4">
-        {history.map((item) => (
-          <div 
-            key={item.runId}
-            className="bg-white border border-gray-200 rounded-xl p-6 hover:shadow-lg transition-all duration-200"
-          >
+          {/* Search and Filter Bar */}
+          <div className="bg-white p-4 rounded-xl shadow-md border border-gray-100">
+            <div className="flex flex-col lg:flex-row gap-4">
+              {/* Search Input */}
+              <div className="flex-1">
+                <div className="relative">
+                  <IconSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+                  <input
+                    type="text"
+                    placeholder="Buscar por nombre de archivo o ID..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full pl-10 pr-10 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+                  />
+                  {searchTerm && (
+                    <button
+                      onClick={() => setSearchTerm('')}
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    >
+                      <IconX size={18} />
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Status Filter */}
+              <div className="flex items-center space-x-2">
+                <IconFilter size={20} className="text-gray-500" />
+                <select
+                  value={filterStatus}
+                  onChange={(e) => setFilterStatus(e.target.value)}
+                  className="px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all bg-white"
+                >
+                  <option value="all">Todos los estados</option>
+                  <option value="COMPLETED">Completados</option>
+                  <option value="FAILED">Fallidos</option>
+                  <option value="PROCESSING">En proceso</option>
+                </select>
+              </div>
+
+              {/* Model Filter */}
+              <div className="flex items-center space-x-2">
+                <IconBrain size={20} className="text-gray-500" />
+                <select
+                  value={filterModel}
+                  onChange={(e) => setFilterModel(e.target.value)}
+                  className="px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all bg-white"
+                >
+                  <option value="all">Todos los modelos</option>
+                  <option value="A">Contragarantías</option>
+                  <option value="B">Informes Sociales</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Active Filters Display */}
+            {(searchTerm || filterStatus !== 'all' || filterModel !== 'all') && (
+              <div className="mt-3 flex items-center space-x-2">
+                <span className="text-sm text-gray-500">Filtros activos:</span>
+                {searchTerm && (
+                  <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-medium">
+                    Búsqueda: {searchTerm}
+                  </span>
+                )}
+                {filterStatus !== 'all' && (
+                  <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
+                    Estado: {filterStatus}
+                  </span>
+                )}
+                {filterModel !== 'all' && (
+                  <span className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
+                    Modelo: {getModelName(filterModel)}
+                  </span>
+                )}
+                <button
+                  onClick={() => {
+                    setSearchTerm('');
+                    setFilterStatus('all');
+                    setFilterModel('all');
+                  }}
+                  className="text-xs text-gray-500 hover:text-gray-700 underline"
+                >
+                  Limpiar filtros
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Results Section */}
+        {filteredHistory.length === 0 ? (
+          <div className="bg-white rounded-xl p-12 text-center shadow-sm border border-gray-100">
+            <IconSearch size={48} className="mx-auto mb-4 text-gray-300" />
+            <p className="text-gray-500 text-lg mb-2">
+              {searchTerm || filterStatus !== 'all' || filterModel !== 'all' 
+                ? 'No se encontraron resultados con los filtros aplicados'
+                : 'No hay documentos procesados aún'}
+            </p>
+            {(searchTerm || filterStatus !== 'all' || filterModel !== 'all') && (
+              <button
+                onClick={() => {
+                  setSearchTerm('');
+                  setFilterStatus('all');
+                  setFilterModel('all');
+                }}
+                className="mt-4 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+              >
+                Limpiar filtros
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="grid gap-4">
+            {filteredHistory.map((item) => (
+              <div 
+                key={item.runId}
+                className="bg-white border border-gray-100 rounded-xl shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden group"
+              >
+                {/* Status Color Bar */}
+                <div className={`h-1 ${item.status === 'COMPLETED' ? 'bg-gradient-to-r from-green-400 to-emerald-500' : item.status === 'FAILED' ? 'bg-gradient-to-r from-red-400 to-pink-500' : 'bg-gradient-to-r from-yellow-400 to-orange-500'}`} />
+                
+                <div className="p-6">
             <div className="flex items-start justify-between mb-4">
               <div className="flex items-start space-x-3">
                 <div className="p-2 bg-blue-50 rounded-lg">
@@ -307,39 +465,29 @@ export default function HistoryViewer({
               {item.runId && (
                 <div className="flex space-x-2">
                   {/* Botón para ver análisis de IA */}
-                  <button
-                    onClick={() => toggleAnalysis(item.runId)}
-                    className={`px-3 py-2 rounded-lg transition-all flex items-center space-x-2 shadow-md hover:shadow-lg ${
-                      expandedItems.has(item.runId) 
-                        ? 'bg-purple-600 text-white hover:bg-purple-700'
-                        : 'bg-gradient-to-r from-purple-500 to-purple-600 text-white hover:from-purple-600 hover:to-purple-700'
-                    }`}
-                    title={expandedItems.has(item.runId) ? "Ocultar análisis IA" : "Ver análisis IA"}
-                    disabled={loadingAnalysis.has(item.runId)}
-                  >
-                    {loadingAnalysis.has(item.runId) ? (
-                      <IconLoader size={18} className="animate-spin" />
-                    ) : (
-                      <IconBrain size={18} />
-                    )}
-                    <span className="hidden sm:inline">
-                      {loadingAnalysis.has(item.runId) 
-                        ? 'Cargando...' 
-                        : expandedItems.has(item.runId) 
-                          ? 'Ocultar IA' 
-                          : 'Ver Análisis IA'}
-                    </span>
-                  </button>
-                  
-                  {/* Botón para ver documento original si está completo */}
                   {item.status === 'COMPLETED' && (
                     <button
-                      onClick={() => onViewResult(item.runId)}
-                      className="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all flex items-center space-x-2 shadow-md hover:shadow-lg"
-                      title="Ver documento completo"
+                      onClick={() => toggleAnalysis(item.runId)}
+                      className={`px-4 py-2.5 rounded-lg transition-all flex items-center space-x-2 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 ${
+                        expandedItems.has(item.runId) 
+                          ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white'
+                          : 'bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:from-purple-600 hover:to-pink-600'
+                      }`}
+                      title={expandedItems.has(item.runId) ? "Ocultar análisis IA" : "Ver análisis IA"}
+                      disabled={loadingAnalysis.has(item.runId)}
                     >
-                      <IconFileText size={18} />
-                      <span className="hidden sm:inline">Ver Documento</span>
+                      {loadingAnalysis.has(item.runId) ? (
+                        <IconLoader size={20} className="animate-spin" />
+                      ) : (
+                        <IconBrain size={20} />
+                      )}
+                      <span className="font-medium">
+                        {loadingAnalysis.has(item.runId) 
+                          ? 'Cargando...' 
+                          : expandedItems.has(item.runId) 
+                            ? 'Ocultar Análisis' 
+                            : 'Ver Análisis IA'}
+                      </span>
                     </button>
                   )}
                 </div>
@@ -399,10 +547,10 @@ export default function HistoryViewer({
                         Análisis de Inteligencia Artificial
                       </h5>
                     </div>
-                    {(item.analysis || item.bedrockResult) && (
+                    {(item.analysis || item.analysisResult || item.bedrockResult) && (
                       <button
                         onClick={() => {
-                          const textToCopy = item.analysis || item.bedrockResult || '';
+                          const textToCopy = item.analysis || item.analysisResult || item.bedrockResult || '';
                           navigator.clipboard.writeText(textToCopy);
                           // Visual feedback
                           const btn = event?.currentTarget as HTMLButtonElement;
@@ -426,10 +574,10 @@ export default function HistoryViewer({
                         <span className="text-purple-700 font-medium">Cargando análisis de IA...</span>
                       </div>
                     </div>
-                  ) : (item.analysis || item.bedrockResult) ? (
+                  ) : (item.analysis || item.analysisResult || item.bedrockResult) ? (
                     <div className="bg-white rounded-lg p-6 shadow-inner border border-purple-100">
                       <div className="prose prose-sm max-w-none text-gray-800 whitespace-pre-wrap leading-relaxed">
-                        {item.analysis || item.bedrockResult}
+                        {item.analysis || item.analysisResult || item.bedrockResult}
                       </div>
                     </div>
                   ) : (
@@ -438,13 +586,6 @@ export default function HistoryViewer({
                         <IconAlertCircle size={20} className="mr-2" />
                         No hay análisis de IA disponible para este documento
                       </p>
-                    </div>
-                  )}
-                  
-                  {/* Debug info - remove in production */}
-                  {!item.analysis && !item.bedrockResult && (
-                    <div className="mt-4 text-xs text-gray-500 bg-gray-100 p-2 rounded">
-                      <p>Debug: Campos disponibles: {item.allFields?.join(', ') || 'N/A'}</p>
                     </div>
                   )}
                 </div>
@@ -460,8 +601,11 @@ export default function HistoryViewer({
                 </div>
               </div>
             )}
+                </div>
+              </div>
+            ))}
           </div>
-        ))}
+        )}
       </div>
     </div>
   );
