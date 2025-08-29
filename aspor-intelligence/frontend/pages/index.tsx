@@ -404,7 +404,7 @@ export default function Home() {
                           📝 Resultado: Hasta 10,000 caracteres
                         </p>
                         <p className="text-xs text-blue-600 mt-1">
-                          📊 Formatos: PDF, PNG, JPG
+                          📊 Formato: Solo PDF
                         </p>
                       </div>
                     </div>

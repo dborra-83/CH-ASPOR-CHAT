@@ -135,7 +135,7 @@ aspor-intelligence/
 - **Caracteres de entrada**: 30,000
 - **Caracteres de salida**: 10,000
 - **Timeout de procesamiento**: 5 minutos
-- **Formatos soportados**: PDF, PNG, JPG, DOCX
+- **Formato soportado**: PDF
 
 ### Modelos de Análisis
 
@@ -160,7 +160,7 @@ Evalúa informes sociales extrayendo:
 
 ### Interfaz Web
 1. Acceder a https://tu-cloudfront-url.cloudfront.net
-2. Seleccionar un documento (PDF/imagen)
+2. Seleccionar un documento PDF
 3. Elegir el modelo de análisis
 4. Click en "Procesar Documento"
 5. Esperar el resultado (10-30 segundos)
@@ -266,6 +266,6 @@ Para soporte y consultas:
 
 ### v1.0.0 (2024-08-28)
 - 🚀 Lanzamiento inicial
-- 📄 Soporte para PDF, PNG, JPG
+- 📄 Soporte para PDF
 - 🤖 Integración con Claude 3.5 Sonnet
 - 📊 Dos modelos de análisis

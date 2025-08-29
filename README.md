@@ -11,7 +11,7 @@ Sistema serverless de procesamiento y análisis inteligente de documentos utiliz
 - **Procesamiento asíncrono** sin límites de timeout
 - **Arquitectura serverless** con AWS Lambda y DynamoDB
 - **Distribución global** con CloudFront CDN
-- **Soporte para múltiples formatos**: PDF, PNG, JPG, JPEG, DOCX
+- **Formato soportado**: PDF
 
 ## 📁 Estructura del Proyecto
 
@@ -115,7 +115,7 @@ aws cloudfront create-invalidation --distribution-id YOUR_DISTRIBUTION_ID --path
 
 ### Análisis de Documentos
 1. Acceder a la aplicación web via CloudFront URL
-2. Cargar un documento (PDF o imagen)
+2. Cargar un documento PDF
 3. Seleccionar el tipo de análisis:
    - **Modelo A**: Contragarantías
    - **Modelo B**: Informes Sociales

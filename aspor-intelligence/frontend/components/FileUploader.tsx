@@ -24,9 +24,7 @@ export default function FileUploader({
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept: {
-      'application/pdf': ['.pdf'],
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
-      'image/*': ['.png', '.jpg', '.jpeg']
+      'application/pdf': ['.pdf']
     },
     maxFiles: 1,
     disabled
@@ -54,12 +52,12 @@ export default function FileUploader({
           />
           <p className="text-lg font-medium text-gray-700 mb-2">
             {isDragActive 
-              ? 'Suelta el archivo aquí' 
-              : 'Arrastra un archivo o haz clic para seleccionar'
+              ? 'Suelta el archivo PDF aquí' 
+              : 'Arrastra un PDF o haz clic para seleccionar'
             }
           </p>
           <p className="text-sm text-gray-500">
-            Formatos soportados: PDF, DOCX, PNG, JPG
+            Formato soportado: Solo PDF
           </p>
           <p className="text-xs text-gray-400 mt-2">
             Tamaño máximo: 10MB
