@@ -4,7 +4,7 @@ import axios from 'axios';
 import { v4 as uuidv4 } from 'uuid';
 import { IconBrain, IconHistory as IconHistoryTab, IconSettings, IconFileAnalytics } from '@tabler/icons-react';
 
-import Chat from '../components/Chat';
+import EnhancedChat from '../components/EnhancedChat';
 import FileUploader from '../components/FileUploader';
 import ModelSelector from '../components/ModelSelector';
 import HistoryViewer from '../components/HistoryViewer';
@@ -23,6 +23,7 @@ export default function Home() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [processing, setProcessing] = useState(false);
   const [activeTab, setActiveTab] = useState<'chat' | 'history'>('chat');
+  const [currentProcess, setCurrentProcess] = useState<string>('');
   const userId = 'web-user';
 
   useEffect(() => {
@@ -44,6 +45,11 @@ export default function Home() {
       timestamp: new Date()
     };
     setMessages(prev => [...prev, newMessage]);
+    
+    // Update current process for system messages
+    if (type === 'system') {
+      setCurrentProcess(content);
+    }
   };
 
   const pollForAnalysisResult = async (baseUrl: string, runId: string) => {
@@ -206,6 +212,7 @@ export default function Home() {
       addMessage('system', `Error: ${error.response?.data?.error || error.message || 'Error desconocido'}`);
     } finally {
       setProcessing(false);
+      setCurrentProcess('');
     }
   };
 
@@ -431,7 +438,7 @@ export default function Home() {
                         </div>
                       </div>
                     ) : (
-                      <Chat messages={messages} loading={processing} />
+                      <EnhancedChat messages={messages} loading={processing} currentProcess={currentProcess} />
                     )}
                   </div>
                 </div>
