@@ -132,24 +132,15 @@ aws cloudfront create-invalidation --distribution-id YOUR_DISTRIBUTION_ID --path
 - Métricas de API Gateway
 - Alarmas configurables en CloudWatch
 
-## 🤝 Contribuir
+## 🌐 Demo en Vivo
 
-1. Fork el proyecto
-2. Crear una rama para tu feature (`git checkout -b feature/AmazingFeature`)
-3. Commit tus cambios (`git commit -m 'Add some AmazingFeature'`)
-4. Push a la rama (`git push origin feature/AmazingFeature`)
-5. Abrir un Pull Request
+Accede a la aplicación en producción:
+- **Frontend:** https://d2h1no7ln1qj3f.cloudfront.net
 
 ## 📝 Licencia
 
-Este proyecto es privado y confidencial.
+Este proyecto es privado y confidencial. Propiedad de ASPOR.
 
 ## 👥 Contacto
 
 Diego Borra - [@dborra-83](https://github.com/dborra-83)
-
-## 🙏 Agradecimientos
-
-- Amazon Web Services por la infraestructura cloud
-- Anthropic por Claude 3 Sonnet
-- Vercel por Next.js
