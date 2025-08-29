@@ -152,6 +152,13 @@ Este proyecto es privado y confidencial. Propiedad de ASPOR.
 
 ## 🔄 Últimas Actualizaciones
 
+### v2.2.0 (29 de Agosto, 2024)
+- 💬 **Chat Profesional**: Nueva interfaz de conversación con diseño elegante
+- 🤖 **Resultados de IA Mejorados**: Análisis presentados en tarjetas con formato rico
+- ⏳ **Indicadores de Progreso**: Visualización clara de cada etapa del procesamiento
+- 🎨 **Diseño Unificado**: Tema coherente púrpura/rosa en toda la aplicación
+- ✨ **Animaciones**: Transiciones suaves y efectos visuales profesionales
+
 ### v2.1.0 (29 de Agosto, 2024)
 - ✨ **Nuevo Sistema de Búsqueda**: Busca documentos por nombre o ID de procesamiento
 - 🎨 **Interfaz Renovada**: Diseño moderno con gradientes y mejor experiencia de usuario
