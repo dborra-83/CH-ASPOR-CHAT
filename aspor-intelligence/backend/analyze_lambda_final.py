@@ -92,7 +92,7 @@ def analyze_with_document_vision(file_key, model_type):
         # Prepare Bedrock request with document
         request_body = {
             "anthropic_version": "bedrock-2023-05-31",
-            "max_tokens": 4000,
+            "max_tokens": 10000,
             "messages": [
                 {
                     "role": "user",
@@ -260,7 +260,7 @@ def handler(event, context):
                         "content": full_prompt
                     }
                 ],
-                "max_tokens": 4000,
+                "max_tokens": 10000,
                 "temperature": 0.1,
                 "top_p": 0.9
             }

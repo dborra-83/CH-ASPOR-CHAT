@@ -289,9 +289,9 @@ def handler(event, context):
         # Validate and limit text
         if not extracted_text or len(extracted_text.strip()) == 0:
             extracted_text = "No se pudo extraer texto del documento. Por favor, verifica que el documento contiene texto legible."
-        elif len(extracted_text) > 30000:
-            print(f"Text is {len(extracted_text)} characters, truncating to 30000...")
-            extracted_text = extracted_text[:30000] + "\n\n[Texto truncado por límite de caracteres]"
+        elif len(extracted_text) > 15000:
+            print(f"Text is {len(extracted_text)} characters, truncating to 15000...")
+            extracted_text = extracted_text[:15000] + "\n\n[Texto truncado por límite de caracteres]"
         
         # Save extracted text to S3
         text_key = f"extracted/{run_id}.txt"

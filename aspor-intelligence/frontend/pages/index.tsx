@@ -46,6 +46,45 @@ export default function Home() {
     setMessages(prev => [...prev, newMessage]);
   };
 
+  const pollForAnalysisResult = async (baseUrl: string, runId: string) => {
+    addMessage('system', '⏳ Procesando análisis con IA. Esto puede tomar 10-30 segundos...');
+    
+    let attempts = 0;
+    const maxAttempts = 20; // 20 attempts * 3 seconds = 60 seconds max
+    
+    while (attempts < maxAttempts) {
+      await new Promise(resolve => setTimeout(resolve, 3000)); // Wait 3 seconds
+      
+      try {
+        const statusRes = await axios.get(`${baseUrl}/status/${runId}`);
+        
+        if (statusRes.data.status === 'COMPLETED') {
+          if (statusRes.data.analysis) {
+            addMessage('system', '✅ Análisis completado');
+            addMessage('assistant', statusRes.data.analysis);
+            return;
+          } else {
+            throw new Error('Análisis completado pero sin resultado');
+          }
+        } else if (statusRes.data.status === 'FAILED') {
+          throw new Error(statusRes.data.error || 'Error en el análisis');
+        }
+        
+        attempts++;
+        if (attempts % 3 === 0) {
+          addMessage('system', `⏳ Analizando documento... (${attempts * 3} segundos)`);
+        }
+      } catch (pollError: any) {
+        console.error('Polling error:', pollError);
+        if (attempts === maxAttempts - 1) {
+          throw new Error('Timeout esperando el análisis del documento');
+        }
+      }
+    }
+    
+    throw new Error('No se pudo completar el análisis en el tiempo esperado');
+  };
+
   const processDocument = async () => {
     if (!selectedFile || !apiUrl) return;
 
@@ -78,19 +117,86 @@ export default function Home() {
         fileKey
       });
 
-      const { runId, textKey } = extractRes.data;
+      // Check if async processing is required
+      if (extractRes.status === 202 || extractRes.data.status === 'PROCESSING_ASYNC') {
+        addMessage('system', '⏳ El documento contiene imágenes escaneadas y está siendo procesado. Esto puede tomar hasta 30 segundos...');
+        
+        // Poll for status
+        let attempts = 0;
+        const maxAttempts = 10;
+        let runId = extractRes.data.runId;
+        let textKey = null;
+        
+        while (attempts < maxAttempts) {
+          await new Promise(resolve => setTimeout(resolve, 3000)); // Wait 3 seconds
+          
+          try {
+            const statusRes = await axios.get(`${baseUrl}/runs/${runId}`);
+            
+            if (statusRes.data.status === 'EXTRACTED') {
+              textKey = statusRes.data.textKey;
+              addMessage('system', '✅ Texto extraído exitosamente');
+              break;
+            } else if (statusRes.data.status === 'FAILED') {
+              throw new Error(statusRes.data.errorMessage || 'Error en extracción');
+            }
+            
+            attempts++;
+            if (attempts % 2 === 0) {
+              addMessage('system', `⏳ Procesando... (${attempts * 3} segundos)`);
+            }
+          } catch (pollError) {
+            console.error('Polling error:', pollError);
+            if (attempts === maxAttempts - 1) {
+              throw new Error('Timeout esperando el procesamiento del documento');
+            }
+          }
+        }
+        
+        if (!textKey) {
+          throw new Error('No se pudo obtener el texto extraído después de esperar');
+        }
+        
+        // Continue with the extracted text
+        const finalRunId = runId;
+        const finalTextKey = textKey;
+        
+        // Step 4: Analyze with Bedrock (for async case)
+        addMessage('system', `Analizando con modelo ${selectedModel === 'A' ? 'Contragarantías' : 'Informes Sociales'}...`);
+        const analyzeRes = await axios.post(`${baseUrl}/analyze`, {
+          userId,
+          runId: finalRunId,
+          model: selectedModel,
+          textKey: finalTextKey
+        });
+        
+        // Check if analysis is async
+        if (analyzeRes.status === 202) {
+          await pollForAnalysisResult(baseUrl, finalRunId);
+        } else if (analyzeRes.data.analysis) {
+          addMessage('assistant', analyzeRes.data.analysis);
+        }
+      } else {
+        // Normal synchronous processing
+        const { runId, textKey } = extractRes.data;
 
-      // Step 4: Analyze with Bedrock
-      addMessage('system', `Analizando con modelo ${selectedModel === 'A' ? 'Contragarantías' : 'Informes Sociales'}...`);
-      const analyzeRes = await axios.post(`${baseUrl}/analyze`, {
-        userId,
-        runId,
-        model: selectedModel,
-        textKey
-      });
-
-      // Step 5: Show result
-      addMessage('assistant', analyzeRes.data.analysis);
+        // Step 4: Analyze with Bedrock
+        addMessage('system', `Analizando con modelo ${selectedModel === 'A' ? 'Contragarantías' : 'Informes Sociales'}...`);
+        const analyzeRes = await axios.post(`${baseUrl}/analyze`, {
+          userId,
+          runId,
+          model: selectedModel,
+          textKey
+        });
+        
+        // Check if analysis is async (202 status)
+        if (analyzeRes.status === 202) {
+          await pollForAnalysisResult(baseUrl, runId);
+        } else if (analyzeRes.data.analysis) {
+          // Step 5: Show result
+          addMessage('assistant', analyzeRes.data.analysis);
+        }
+      }
       
       // Clear file after successful processing
       setSelectedFile(null);
@@ -106,16 +212,37 @@ export default function Home() {
   const viewHistoryResult = async (runId: string) => {
     try {
       const baseUrl = apiUrl.endsWith('/') ? apiUrl.slice(0, -1) : apiUrl;
-      const response = await axios.get(`${baseUrl}/runs/${runId}`);
+      
+      // First try the new status endpoint
+      let response;
+      try {
+        response = await axios.get(`${baseUrl}/status/${runId}`);
+      } catch (err) {
+        // Fallback to old endpoint if new one fails
+        response = await axios.get(`${baseUrl}/runs/${runId}`);
+      }
+      
       setActiveTab('chat');
       setMessages([]);
       addMessage('system', `Mostrando resultado del procesamiento ${runId}`);
+      
+      // Check if analysis is available
       if (response.data.analysis) {
         addMessage('assistant', response.data.analysis);
+      } else if (response.data.analysisResult) {
+        // Check for analysisResult field (from DynamoDB)
+        addMessage('assistant', response.data.analysisResult);
+      } else if (response.data.bedrockResult) {
+        // Check for bedrockResult field (legacy)
+        addMessage('assistant', response.data.bedrockResult);
+      } else if (response.data.status === 'PROCESSING_ASYNC' || response.data.status === 'PROCESSING') {
+        addMessage('system', '⏳ El documento aún se está procesando. Por favor, intenta nuevamente en unos segundos.');
+      } else {
+        addMessage('system', 'No se encontró el análisis para este documento. Es posible que necesite ser reprocesado.');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error loading result:', error);
-      addMessage('system', 'Error al cargar el resultado del historial');
+      addMessage('system', `Error al cargar el resultado: ${error.message || 'Error desconocido'}`);
     }
   };
 
@@ -264,7 +391,10 @@ export default function Home() {
                       </p>
                       <div className="mt-3 pt-3 border-t border-blue-200">
                         <p className="text-xs text-blue-600">
-                          📄 Límite: 15,000 caracteres
+                          📄 Límite: 30,000 caracteres de entrada
+                        </p>
+                        <p className="text-xs text-blue-600 mt-1">
+                          📝 Resultado: Hasta 10,000 caracteres
                         </p>
                         <p className="text-xs text-blue-600 mt-1">
                           📊 Formatos: PDF, PNG, JPG
