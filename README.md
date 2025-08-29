@@ -5,11 +5,13 @@ Sistema serverless de procesamiento y análisis inteligente de documentos utiliz
 ## 🚀 Características
 
 - **Extracción de texto OCR** con Amazon Textract
-- **Análisis con IA** usando Claude 3 Sonnet vía Amazon Bedrock
+- **Análisis con IA** usando Claude 3.5 Sonnet vía Amazon Bedrock
 - **Interfaz web moderna** desarrollada con Next.js y React
+- **Historial interactivo** con búsqueda y filtros dinámicos
+- **Procesamiento asíncrono** sin límites de timeout
 - **Arquitectura serverless** con AWS Lambda y DynamoDB
 - **Distribución global** con CloudFront CDN
-- **Soporte para múltiples formatos**: PDF, PNG, JPG, JPEG
+- **Soporte para múltiples formatos**: PDF, PNG, JPG, JPEG, DOCX
 
 ## 📁 Estructura del Proyecto
 
@@ -111,6 +113,7 @@ aws cloudfront create-invalidation --distribution-id YOUR_DISTRIBUTION_ID --path
 
 ## 📖 Uso
 
+### Análisis de Documentos
 1. Acceder a la aplicación web via CloudFront URL
 2. Cargar un documento (PDF o imagen)
 3. Seleccionar el tipo de análisis:
@@ -118,6 +121,12 @@ aws cloudfront create-invalidation --distribution-id YOUR_DISTRIBUTION_ID --path
    - **Modelo B**: Informes Sociales
 4. Hacer clic en "Analizar con IA"
 5. Ver el resultado del análisis
+
+### Historial de Análisis
+- **Búsqueda**: Encuentra documentos por nombre o ID
+- **Filtros**: Por estado (Completado/Fallido) o modelo de análisis
+- **Vista de Resultados**: Click en "Ver Análisis IA" para ver el análisis completo
+- **Interfaz Moderna**: Diseño con gradientes y transiciones suaves
 
 ## 🔒 Seguridad
 
@@ -140,6 +149,15 @@ Accede a la aplicación en producción:
 ## 📝 Licencia
 
 Este proyecto es privado y confidencial. Propiedad de ASPOR.
+
+## 🔄 Últimas Actualizaciones
+
+### v2.1.0 (29 de Agosto, 2024)
+- ✨ **Nuevo Sistema de Búsqueda**: Busca documentos por nombre o ID de procesamiento
+- 🎨 **Interfaz Renovada**: Diseño moderno con gradientes y mejor experiencia de usuario
+- 🔍 **Filtros Avanzados**: Filtra por estado y modelo de análisis
+- 🐛 **Correcciones**: Botón "Ver Análisis IA" funciona correctamente con procesamiento asíncrono
+- 📊 **Mejoras en el Historial**: Vista mejorada con información más clara y accesible
 
 ## 👥 Contacto
 

@@ -239,6 +239,13 @@ Para soporte y consultas:
 
 ## 🔄 Actualizaciones Recientes
 
+### v2.1.0 (2024-08-29)
+- ✅ **Historial Mejorado**: Búsqueda y filtros dinámicos en el historial
+- ✅ **Interfaz Visual Renovada**: Diseño moderno con gradientes y mejor UX
+- ✅ **Corrección de Bugs**: Botón "Ver Análisis IA" ahora funciona correctamente
+- ✅ **Modelo de Análisis Visible**: Ya no muestra "N/A" en el campo modelo
+- ✅ **Filtros Avanzados**: Por estado (Completado/Fallido) y modelo (Contragarantías/Informes)
+
 ### v2.0.0 (2024-08-29)
 - ✅ Procesamiento asíncrono para evitar timeouts
 - ✅ Integración con Bedrock Vision para PDFs escaneados
