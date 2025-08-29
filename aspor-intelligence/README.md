@@ -1,180 +1,253 @@
-# ASPOR Intelligence
+# ASPOR Intelligence - Sistema de Análisis de Documentos con IA
 
-Sistema serverless de procesamiento inteligente de documentos legales y sociales con interfaz de chat moderna.
+Sistema empresarial de análisis inteligente de documentos legales y sociales utilizando AWS y Claude 3.5 Sonnet.
 
-## 📋 Descripción
+## 🚀 Características
 
-ASPOR Intelligence es una plataforma que permite el análisis automatizado de documentos mediante IA, especializada en:
-- **Contragarantías**: Análisis detallado de documentos legales y compromisos de respaldo
-- **Informes Sociales**: Procesamiento de informes socioeconómicos para evaluación institucional
+- **Análisis Inteligente con IA**: Utiliza Claude 3.5 Sonnet para análisis profundo de documentos
+- **Procesamiento Asíncrono**: Maneja documentos grandes sin timeouts (hasta 5 minutos de procesamiento)
+- **Doble Modo de Análisis**:
+  - **Contragarantías**: Análisis de documentos legales y garantías
+  - **Informes Sociales**: Evaluación socioeconómica y planes de intervención
+- **Visión por Computadora**: Procesa PDFs escaneados e imágenes directamente
+- **Interfaz Web Moderna**: React/Next.js con diseño responsivo
+- **Escalable**: Arquitectura serverless en AWS
 
-## 🏗️ Arquitectura
+## 📋 Requisitos Previos
 
-### Stack Tecnológico
-- **Frontend**: Next.js 14, TypeScript, Tailwind CSS, Tabler UI
-- **Backend**: AWS Lambda (Python 3.11)
-- **Infraestructura**: AWS CDK (Python)
-- **Servicios AWS**:
-  - S3: Almacenamiento de documentos
-  - DynamoDB: Tracking de ejecuciones
-  - Textract: Extracción de texto (OCR)
-  - Bedrock: Análisis con Claude 3 Sonnet
-  - CloudFront: CDN para distribución
-  - API Gateway: Endpoints REST
-
-## 🚀 Instalación y Despliegue
-
-### Prerequisitos
-- AWS CLI configurado
+- Node.js 18+ y npm
 - Python 3.11+
-- Node.js 18+
-- AWS CDK CLI (`npm install -g aws-cdk`)
+- AWS CLI configurado
+- AWS CDK 2.100+
+- Cuenta AWS con permisos para:
+  - Lambda, S3, DynamoDB
+  - API Gateway, CloudFront
+  - Bedrock (Claude 3.5 Sonnet)
+  - Textract
 
-### 1. Configuración del Backend
+## 🛠️ Instalación
 
+### 1. Clonar el repositorio
 ```bash
-cd cdk
-python -m venv .venv
-.venv\Scripts\activate  # En Windows
-# source .venv/bin/activate  # En Linux/Mac
-pip install -r requirements.txt
+git clone https://github.com/tu-usuario/aspor-intelligence.git
+cd aspor-intelligence
 ```
 
-### 2. Configuración del Frontend
-
+### 2. Instalar dependencias del CDK
 ```bash
-cd frontend
+cd cdk
 npm install
 ```
 
-### 3. Despliegue con CDK
-
+### 3. Instalar dependencias del Frontend
 ```bash
-cd cdk
+cd ../frontend
+npm install
+```
+
+### 4. Configurar variables de entorno
+```bash
+# En frontend/.env.local
+NEXT_PUBLIC_API_URL=https://tu-api-gateway-url.amazonaws.com/prod
+```
+
+### 5. Desplegar la infraestructura
+```bash
+cd ../cdk
 cdk bootstrap  # Solo la primera vez
 cdk deploy --all
 ```
 
-### 4. Configuración de Prompts en S3
+## 🏗️ Arquitectura
 
-Después del despliegue, sube los archivos de prompts al bucket S3:
+### Componentes Principales
 
-```bash
-aws s3 cp ../prompts/CONTRAGARANTIAS.txt s3://aspor-intelligence-documents/prompts/
-aws s3 cp ../prompts/INFORMES_SOCIALES.txt s3://aspor-intelligence-documents/prompts/
 ```
+┌─────────────────┐     ┌──────────────┐     ┌─────────────────┐
+│   CloudFront    │────▶│   Frontend   │────▶│  API Gateway    │
+│  Distribution   │     │   (Next.js)  │     │                 │
+└─────────────────┘     └──────────────┘     └─────────────────┘
+                                                      │
+                                                      ▼
+┌─────────────────────────────────────────────────────────────┐
+│                         Lambda Functions                      │
+├─────────────────┬────────────────┬──────────────────────────┤
+│  Upload Lambda  │ Extract Lambda │   Analyze Lambda         │
+│  (Presigned URL)│  (Textract)    │  (Inicia async)          │
+└─────────────────┴────────────────┴──────────────────────────┘
+                           │                    │
+                           ▼                    ▼
+                    ┌──────────────┐    ┌──────────────────┐
+                    │      S3      │    │ Process Async    │
+                    │   Buckets    │    │    Lambda        │
+                    └──────────────┘    │  (5 min timeout) │
+                                        └──────────────────┘
+                           │                    │
+                           ▼                    ▼
+                    ┌──────────────┐    ┌──────────────────┐
+                    │   DynamoDB   │    │  Bedrock API     │
+                    │    Table     │    │ (Claude 3.5)     │
+                    └──────────────┘    └──────────────────┘
+```
+
+### Flujo de Procesamiento
+
+1. **Carga del Documento**: Usuario sube PDF/imagen via presigned URL a S3
+2. **Extracción de Texto**: 
+   - Intenta con AWS Textract (3 segundos timeout)
+   - Si falla, usa Bedrock Vision directamente
+3. **Análisis Asíncrono**:
+   - API retorna inmediatamente (202 Accepted)
+   - Lambda asíncrona procesa con Claude 3.5 Sonnet
+   - Frontend hace polling cada 3 segundos
+4. **Resultado**: Análisis detallado hasta 10,000 caracteres
 
 ## 📁 Estructura del Proyecto
 
 ```
 aspor-intelligence/
-├── cdk/                    # Infraestructura como código
-│   ├── app.py             # Punto de entrada CDK
-│   └── stacks/            # Stacks de infraestructura
-│       ├── storage_stack.py
-│       ├── api_stack.py
-│       └── frontend_stack.py
+├── frontend/               # Aplicación Next.js
+│   ├── pages/             # Páginas de la aplicación
+│   ├── components/        # Componentes React
+│   └── public/            # Assets estáticos
 ├── backend/               # Funciones Lambda
 │   ├── extract_lambda.py # Extracción con Textract
-│   ├── analyze_lambda.py # Análisis con Bedrock
-│   ├── presigned_lambda.py
-│   ├── history_lambda.py
-│   └── status_lambda.py
-├── frontend/              # Aplicación Next.js
-│   ├── pages/            # Páginas de la aplicación
-│   ├── components/       # Componentes React
-│   └── styles/           # Estilos CSS
-├── prompts/              # Templates de prompts
-│   ├── CONTRAGARANTIAS.txt
-│   └── INFORMES_SOCIALES.txt
-└── docs/                 # Documentación
-    └── changing_prompt.md
+│   ├── analyze_lambda_async.py # Iniciador asíncrono
+│   ├── process_async_lambda.py # Procesador principal
+│   ├── check_status_lambda.py  # Verificación de estado
+│   └── presigned_lambda.py     # URLs presignadas
+├── cdk/                   # Infraestructura como código
+│   ├── stacks/           # Stacks de CDK
+│   │   ├── storage_stack.py    # S3 y DynamoDB
+│   │   ├── api_stack.py        # Lambda y API Gateway
+│   │   └── frontend_stack.py   # CloudFront y S3
+│   └── app.py            # Aplicación CDK principal
+└── docs/                 # Documentación adicional
 ```
 
-## 🔄 Flujo de Procesamiento
+## 🔧 Configuración
 
-1. **Carga de Archivo**: Usuario sube PDF/DOCX/imagen
-2. **Almacenamiento**: Archivo guardado en S3 vía presigned URL
-3. **Extracción**: Lambda invoca Textract para OCR
-4. **Análisis**: Lambda invoca Bedrock con prompt específico
-5. **Resultado**: Respuesta mostrada en interfaz tipo chat
-6. **Historial**: Almacenamiento en DynamoDB para consulta posterior
+### Límites del Sistema
+- **Tamaño máximo de archivo**: 10MB
+- **Caracteres de entrada**: 30,000
+- **Caracteres de salida**: 10,000
+- **Timeout de procesamiento**: 5 minutos
+- **Formatos soportados**: PDF, PNG, JPG, DOCX
 
-## 📊 Esquema de DynamoDB
+### Modelos de Análisis
 
-```json
-{
-  "pk": "USER#web-user",
-  "sk": "RUN#2025-08-28T12:00:00#uuid",
-  "runId": "uuid",
-  "status": "COMPLETED|FAILED|PROCESSING",
-  "model": "A|B",
-  "fileKey": "s3://path/to/file",
-  "textExtracted": "10,532 caracteres",
-  "bedrockResult": "[análisis completo]",
-  "processedAt": "2025-08-28T12:10:00Z"
-}
-```
+#### Modelo A - Contragarantías
+Analiza documentos legales identificando:
+- Tipos de contragarantías
+- Partes involucradas
+- Condiciones específicas
+- Plazos y vigencia
+- Riesgos identificados
 
-## 🔧 Configuración de Desarrollo Local
+#### Modelo B - Informes Sociales
+Evalúa informes sociales extrayendo:
+- Situación socioeconómica
+- Factores de riesgo
+- Recursos disponibles
+- Necesidades detectadas
+- Recomendaciones de intervención
+- Plan de acción sugerido
 
-### Frontend Development
+## 🚀 Uso
 
+### Interfaz Web
+1. Acceder a https://tu-cloudfront-url.cloudfront.net
+2. Seleccionar un documento (PDF/imagen)
+3. Elegir el modelo de análisis
+4. Click en "Procesar Documento"
+5. Esperar el resultado (10-30 segundos)
+
+### API REST
 ```bash
-cd frontend
-npm run dev  # Servidor en http://localhost:3000
+# 1. Obtener URL de carga
+curl -X POST https://api-url/upload \
+  -H "Content-Type: application/json" \
+  -d '{"fileName": "documento.pdf", "fileType": "application/pdf"}'
+
+# 2. Subir archivo a S3
+curl -X PUT "presigned-url" \
+  --data-binary @documento.pdf
+
+# 3. Extraer texto
+curl -X POST https://api-url/extract \
+  -H "Content-Type: application/json" \
+  -d '{"fileKey": "uploads/xxx.pdf", "runId": "xxx"}'
+
+# 4. Analizar documento
+curl -X POST https://api-url/analyze \
+  -H "Content-Type: application/json" \
+  -d '{"runId": "xxx", "model": "A"}'
+
+# 5. Verificar estado
+curl https://api-url/status/xxx
 ```
 
-### Variables de Entorno
+## 🔍 Monitoreo y Debugging
 
-Crear archivo `.env.local` en frontend/:
+### CloudWatch Logs
+Los logs se encuentran en CloudWatch bajo:
+- `/aws/lambda/AsporApiStack-ExtractLambda-*`
+- `/aws/lambda/AsporApiStack-ProcessAsyncLambda-*`
+- `/aws/lambda/AsporApiStack-AnalyzeLambda-*`
 
+### DynamoDB
+Tabla: `aspor-intelligence-executions`
+- Partition Key: `pk` (USER#userId)
+- Sort Key: `sk` (RUN#timestamp#runId)
+- GSI: `runId-index`
+
+### Diagnóstico
+```bash
+cd backend
+python diagnose_flow.py [runId]
 ```
-NEXT_PUBLIC_API_URL=https://api-gateway-url.amazonaws.com
-```
 
-## 📈 Límites y Costos
+## 🛡️ Seguridad
 
-- **Usuarios esperados**: ≤10
-- **Documentos/mes**: ~100
-- **Límite de texto**: 15,000 caracteres por documento
-- **Timeout Lambda**: 5 min (extract), 10 min (analyze)
+- URLs presignadas con expiración de 5 minutos
+- CORS configurado para dominios específicos
+- IAM roles con permisos mínimos necesarios
+- Sin almacenamiento de datos sensibles en logs
+- Encriptación en tránsito y reposo
 
-## 🔐 Seguridad
+## 📈 Escalabilidad
 
-- Bucket S3 privado con acceso solo vía presigned URLs
-- CORS configurado en API Gateway y S3
-- CloudFront con HTTPS obligatorio
-- DynamoDB con encriptación en reposo
+- **Lambda Concurrency**: Configurada para 100 ejecuciones simultáneas
+- **DynamoDB**: On-demand billing
+- **S3**: Lifecycle policies para archivos antiguos
+- **CloudFront**: Caché global para assets estáticos
 
-## 🛠️ Mantenimiento
+## 🌐 Demo en Vivo
 
-### Actualización de Prompts
+Accede a la aplicación en producción:
+- **Frontend:** https://d2h1no7ln1qj3f.cloudfront.net
 
-1. Modificar archivo en `/prompts/`
-2. Subir a S3: `aws s3 cp prompts/[archivo].txt s3://aspor-intelligence-documents/prompts/`
-3. Documentar cambio en `/docs/changing_prompt.md`
+## 📝 Licencia
 
-### Monitoreo
+Este proyecto es propiedad de ASPOR. Todos los derechos reservados.
 
-- CloudWatch Logs para todas las Lambdas
-- Métricas de API Gateway
-- Alertas de DynamoDB
+## 📞 Soporte
 
-## 📝 Notas de Implementación
+Para soporte y consultas:
+- Email: soporte@aspor.com
+- Issues: https://github.com/tu-usuario/aspor-intelligence/issues
 
-- El sistema usa Textract para OCR, asegurando compatibilidad con documentos escaneados
-- Bedrock con Claude 3 Sonnet proporciona análisis de alta calidad
-- La interfaz tipo chat facilita la interacción y revisión de resultados
-- El historial permite auditoría y revisión de procesamiento anteriores
+## 🔄 Actualizaciones Recientes
 
-## 🤝 Contribución
+### v2.0.0 (2024-08-29)
+- ✅ Procesamiento asíncrono para evitar timeouts
+- ✅ Integración con Bedrock Vision para PDFs escaneados
+- ✅ Aumento de límites: 30k entrada, 10k salida
+- ✅ Polling automático en frontend
+- ✅ Manejo mejorado de errores
 
-Para contribuir al proyecto:
-1. Documentar cambios en prompts en `changing_prompt.md`
-2. Mantener la estructura de código existente
-3. Actualizar este README con cambios significativos
-
-## 📄 Licencia
-
-Proyecto interno ASPOR - Todos los derechos reservados.
+### v1.0.0 (2024-08-28)
+- 🚀 Lanzamiento inicial
+- 📄 Soporte para PDF, PNG, JPG
+- 🤖 Integración con Claude 3.5 Sonnet
+- 📊 Dos modelos de análisis
